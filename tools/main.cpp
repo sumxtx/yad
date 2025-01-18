@@ -76,11 +76,51 @@ namespace
     }
 
     // String Handling
-    std::vector<std::string> split(std::string_view str, char delimiter);
-    bool is_prefix(std::string_view str, std::string_view of);
-    //process Manipulation tasks
-    void resume(pid_t pid);
-    void wait_on_signal(pid_t pid);
+    // split, read delimited text from the string we give it
+    std::vector<std::string> split(std::string_view str, char delimiter)
+    {
+        std::vector<std::string> out{};
+        std::stringstream ss {std::string{str}};
+        std::string item;
+        
+        //read a block of text from the given stream into item until it hits a delimiter
+        while(std::getline(ss, item, delimiter))
+        {
+            //collects all of these blocks into a std::vector and return it
+            out.push_back(item);
+        }
+        return out;
+    }
+
+    //returns and indication of whether a string is either equal to or a prefix of antoher string
+    bool is_prefix(std::string_view str, std::string_view of)
+    {
+        if(str.size() > of.size()) return false;
+        return std::equal(str.begin(),str.end(),of.begin());
+    }
+
+    // Process Manipulation Tasks
+    // use PTRACE_CONT to make the inferior process continue
+    void resume(pid_t pid)
+    {
+        if(ptrace(PTRACE_CONT,pid,nullptr,nullptr) <0 )
+        {
+            std::cerr << "Couldn't continue\n";
+            std::exit(-1);
+        }
+    }
+    
+    //wraps a call to waitpid 
+    void wait_on_signal(pid_t pid)
+    {
+        int wait_status;
+        int options = 0;
+        if(waitpid(pid, &wait_status, options) < 0)
+        {
+            std::perror("waitpid failed");
+            std::exit(-1);
+        }
+    }
 
     void handle_command(pid_t pid, std::string_view line)
     {
