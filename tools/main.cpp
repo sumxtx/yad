@@ -1,5 +1,10 @@
 #include <iostream>
+#include <editline/readline.h>
+#include <vector>
 #include <unistd.h>
+#include <algorithm>
+#include <sstream>
+#include <string>
 
 /*
  *  Usage:
@@ -69,6 +74,28 @@ namespace
         }
         return pid;
     }
+
+    // String Handling
+    std::vector<std::string> split(std::string_view str, char delimiter);
+    bool is_prefix(std::string_view str, std::string_view of);
+    //process Manipulation tasks
+    void resume(pid_t pid);
+    void wait_on_signal(pid_t pid);
+
+    void handle_command(pid_t pid, std::string_view line)
+    {
+        auto args = split(line, ' ');
+        auto command = args[0];
+        if(is_prefix(command, "continue"))
+        {
+            resume(pid);
+            wait_on_signal(pid);
+        }
+        else
+        {
+            std::cerr << "Unknown command\n";
+        }
+    }
 }
 
 int main(int argc, const char **argv)
@@ -87,5 +114,38 @@ int main(int argc, const char **argv)
     if (waitpid(pid, &wait_status, options) < 0)
     {
         std::perror("waitpid failed");
+    }
+
+    // Implement a simple command line interface to interact with the program
+    // the user pass commands throught this interface to the debugger line by line
+    // when a Ctrl-D <EOF> is passed the line gets a null and the interface closes
+    char* line = nullptr;
+    while ((line = readline("sdb> ")) != nullptr)
+    {
+        std::string line_str;
+
+        //If line is empty, the line is freed and the last command passed is recalled
+        //using functions from the libedit, history_list and history_length
+        if(line == std::string_view(""))
+        {
+            free(line);
+            if(history_length > 0)
+            {
+                line_str = history_list()[history_length - 1]->line;
+            }
+        }
+        // If line passed by the user is not empty we save it to string
+        // add it to the history and free its memory
+        else
+        {
+            line_str = line;
+            add_history(line);
+            free(line);
+        }
+        //handle the command on the saved string
+        if(!line_str.empty())
+        {
+            handle_command(pid, line_str);
+        }
     }
 }
