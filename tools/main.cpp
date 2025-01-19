@@ -1,11 +1,14 @@
 #include <iostream>
-#include <editline/readline.h>
-#include <vector>
 #include <unistd.h>
+#include <string_view>
+#include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <editline/readline.h>
+#include <string>
+#include <vector>
 #include <algorithm>
 #include <sstream>
-#include <string>
-
 /*
  *  Usage:
  *          yad <program name>
