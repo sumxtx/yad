@@ -1,3 +1,5 @@
+#include <cerrno>
+#include <libyad/error.hpp>
 #include <libyad/process.hpp>
 #include <libyad/pipe.hpp>
 #include <sys/ptrace.h>
@@ -17,7 +19,7 @@ std::unique_ptr<yad::process> yad::process::launch(std::filesystem::path path, b
   pipe channel(/*close_on_exec*/true);
   pid_t pid;
 
-  if(debug and PTRACE(PTRACE_TRACEME, 0, nullptr, nullptr))
+  if(debug and ptrace(PTRACE_TRACEME, 0, nullptr, nullptr))
   {
     exit_with_perror(channel, "Tracing Failed");
   }
@@ -73,7 +75,7 @@ std::unique_ptr<yad::process> yad::process::attach(pid_t pid)
   }
 
   std::unique_ptr<process> proc(new process(pid, /*terminate_on_end*/false, /*attached*/true));
-  proc->wait_on_signal;
+  proc->wait_on_signal();
 
   return proc;
 }
@@ -123,7 +125,7 @@ yad::stop_reason::stop_reason(int wait_status)
     reason = process_state::exited;
     info = WEXITSTATUS(wait_status);
   }
-  else if(WIFSIGNALES(wait_status))
+  else if(WIFSIGNALED(wait_status))
   {
     reason = process_state::terminated;
     info = WTERMSIG(wait_status);

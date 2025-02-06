@@ -1,3 +1,8 @@
+/*
+ *  Usage:
+ *          yad <program name>
+ *          yad -p <pid>
+ */
 #include <iostream>
 #include <unistd.h>
 #include <string_view>
@@ -9,13 +14,10 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
-/*
- *  Usage:
- *          yad <program name>
- *          yad -p <pid>
- *
- *
- */
+#include <memory>
+#include <libyad/process.hpp>
+#include <libyad/error.hpp>
+
 
 //Anonymous launch space if they are used only in the implementation file they belong to
 namespace
@@ -26,12 +28,11 @@ namespace
      commence tracing another process using PTRACE_ATTACH or PTRACE_SEIZE. */
   std::unique_ptr<yad::process> attach(int argc, const char **argv)
   {
-    pid_t pid = 0;
     //Passing PID
     if(argc == 3 && argv[1] == std::string_view("-p"))
     {
       //pid is equal the second argument
-      pid = std::atoi(argv[2]);
+      pid_t pid = std::atoi(argv[2]);
       return yad::process::attach(pid);
     }
     // Passing process name
@@ -39,7 +40,7 @@ namespace
     {
       const char* program_path = argv[1];
       //Try to fork, and return if failes
-      return yad::process::launch(pid);
+      return yad::process::launch(program_path);
     }
   }
 
@@ -89,8 +90,7 @@ namespace
       std::exit(-1);
     }
   }
-  void print_stop_reason(
-      const yad::process& process, yad::stop_reason reason)
+  void print_stop_reason(const yad::process& process, yad::stop_reason reason)
   {
     std::cout << "Process " << process.pid() << ' ' ;
     switch (reason.reason)
@@ -125,13 +125,13 @@ namespace
   }
 }
 
-void main_loop(std::unique_ptr<sdb::process>& process)
+void main_loop(std::unique_ptr<yad::process>& process)
 {
   // Implement a simple command line interface to interact with the program
   // the user pass commands throught this interface to the debugger line by line
   // when a Ctrl-D <EOF> is passed the line gets a null and the interface closes
   char* line = nullptr;
-  while ((line = readline("sdb> ")) != nullptr)
+  while ((line = readline("yad> ")) != nullptr)
   {
     std::string line_str;
 
@@ -158,11 +158,11 @@ void main_loop(std::unique_ptr<sdb::process>& process)
     {
       try
       {
-        handle_command(pid, line_str);
+        handle_command(process, line_str);
       }
       catch(const yad::error& err)
       {
-        std::cout << err.what(); << '\n';
+        std::cout << err.what() << '\n';
       }
     }
   }
@@ -185,13 +185,4 @@ int main(int argc, const char **argv)
   {
     std::cout << err.what() << '\n';
   }
-
-  int wait_status;
-  int options = 0;
-  //Wait for the process to stop after we hace attached to it
-  if (waitpid(pid, &wait_status, options) < 0)
-  {
-    std::perror("waitpid failed");
-  }
-
 }

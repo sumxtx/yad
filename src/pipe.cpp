@@ -22,10 +22,12 @@ int yad::pipe::release_read()
 {
   return std::exchange(fds_[read_fd], -1);
 }
+
 int yad::pipe::release_write()
 {
-  return std::exchange(fds_[read_fd], -1);
+  return std::exchange(fds_[write_fd], -1);
 }
+
 void yad::pipe::close_read()
 {
   if(fds_[read_fd] != -1)
@@ -34,6 +36,7 @@ void yad::pipe::close_read()
     fds_[read_fd] = -1;
   }
 }
+
 void yad::pipe::close_write()
 {
   if(fds_[write_fd] != -1)
@@ -56,7 +59,7 @@ std::vector<std::byte> yad::pipe::read()
   return std::vector<std::byte>(bytes, bytes + chars_read);
 }
 
-void yad::process::write(std::byte *from, std::size_t bytes)
+void yad::pipe::write(std::byte *from, std::size_t bytes)
 {
   if(::write(fds_[write_fd], from, bytes) < 0)
   {

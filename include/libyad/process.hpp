@@ -8,8 +8,17 @@
 
 namespace yad
 {
+  // Keep track of the current running state of the process
+  enum class process_state
+  {
+    stopped,
+    running,
+    exited,
+    terminated
+  };
   //Type for the wait_on_signal return
   //holds the reason for a stop, the process exited, terminated or just stopped
+
   struct stop_reason
   {
     stop_reason(int wait_status);
@@ -18,15 +27,6 @@ namespace yad
     //some information about the stop, return value of the exit, or the signal that
     //caused a stop or termination
     std::uint8_t info;
-  };
-
-  // Keep track of the current running state of the process
-  enum class process_state
-  {
-    stopped,
-    running,
-    exited,
-    terminated
   };
 
   //We will need a type that represent any running process we can
@@ -43,7 +43,7 @@ namespace yad
       // that would create an entire new process on the system, so
       // Users of the library will need to interact with yad::process through pointers
       // smart pointers will automatically manage the allocated memory
-      static std::unique_ptr<process> launch(std::filessytem::path path, bool debug = true);
+      static std::unique_ptr<process> launch(std::filesystem::path path, bool debug = true);
       static std::unique_ptr<process> attach(pid_t pid);
 
       void resume();
@@ -68,7 +68,7 @@ namespace yad
       // Way for the static members to construct a process object
       // private constructor
       process(pid_t pid, bool terminate_on_end, bool is_attached)
-        : pid_(pid), terminate_on_end_(terminate_on_end), is attached_(is_attached) {}
+        : pid_(pid), terminate_on_end_(terminate_on_end), is_attached_(is_attached) {}
 
       pid_t pid_ = 0;
       // We should clean up the inferior process if we launched it ourselves

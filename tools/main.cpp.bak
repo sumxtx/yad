@@ -163,7 +163,7 @@ int main(int argc, const char **argv)
     // the user pass commands throught this interface to the debugger line by line
     // when a Ctrl-D <EOF> is passed the line gets a null and the interface closes
     char* line = nullptr;
-    while ((line = readline("sdb> ")) != nullptr)
+    while ((line = readline("yad> ")) != nullptr)
     {
         std::string line_str;
 

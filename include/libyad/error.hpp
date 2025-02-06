@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <cstring>
+#include <cerrno>
 
 namespace yad
 {
@@ -15,7 +16,7 @@ namespace yad
       //error:send, takes a message to use as ther error description
       [[noreturn]] static void send(const std::string& what)
       {
-        throw error(prefix + ": " + std::strerror(errno));
+        throw error(what);
       }
       //error::send_errno uses the contents of errno as the error description
       //adding the message we provide as prefix

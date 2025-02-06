@@ -33,10 +33,10 @@ install(
 )
 
 install(
-    EXPORT sdb-targets
-    FILE sdb-config.cmake
-    NAMESPACE sdb::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sdb
+    EXPORT yad-targets
+    FILE yad-config.cmake
+    NAMESPACE yad::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/yad
 )
 
 
