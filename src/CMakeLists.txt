@@ -1,4 +1,4 @@
-add_library(libyad process.cpp)
+add_library(libyad process.cpp pipe.cpp)
 add_library(yad::libyad ALIAS libyad)
 
 set_target_properties(

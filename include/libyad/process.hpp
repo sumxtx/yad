@@ -43,7 +43,7 @@ namespace yad
       // that would create an entire new process on the system, so
       // Users of the library will need to interact with yad::process through pointers
       // smart pointers will automatically manage the allocated memory
-      static std::unique_ptr<process> launch(std::filessytem::path path);
+      static std::unique_ptr<process> launch(std::filessytem::path path, bool debug = true);
       static std::unique_ptr<process> attach(pid_t pid);
 
       void resume();
@@ -67,8 +67,8 @@ namespace yad
     private:
       // Way for the static members to construct a process object
       // private constructor
-      process(pid_t pid, bool terminate_on_end)
-        : pid_(pid), terminate_on_end_(terminate_on_end) {}
+      process(pid_t pid, bool terminate_on_end, bool is_attached)
+        : pid_(pid), terminate_on_end_(terminate_on_end), is attached_(is_attached) {}
 
       pid_t pid_ = 0;
       // We should clean up the inferior process if we launched it ourselves
@@ -79,6 +79,8 @@ namespace yad
 
       // Member to track the state the process is in
       process_state state_ = process_state::stopped;
+
+      bool is_attached_ = true; //PAGE62
   };
 }
 

@@ -1,12 +1,27 @@
 #include <libyad/process.hpp>
+#include <libyad/pipe.hpp>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-std::unique_ptr<yad::process> yad::process::launch(std::filesystem::path path)
+void exit_with_perror(yad::pipe& channel, std::string const& prefix)
 {
+  auto message = prefix + ": " + std::strerror(errno);
+  channel.write(reinterpret_cast<std::byte*>(message.data()), message.size());
+  exit(-1);
+}
+
+std::unique_ptr<yad::process> yad::process::launch(std::filesystem::path path, bool debug)
+{
+  pipe channel(/*close_on_exec*/true);
   pid_t pid;
+
+  if(debug and PTRACE(PTRACE_TRACEME, 0, nullptr, nullptr))
+  {
+    exit_with_perror(channel, "Tracing Failed");
+  }
+
   if((pid = fork()) < 0)
   {
     error::send_errno("fork failed");
@@ -14,6 +29,7 @@ std::unique_ptr<yad::process> yad::process::launch(std::filesystem::path path)
 
   if(pid == 0)
   {
+    channel.close_read();
     if(ptrace(PTRACE_TRACEME,0, nullptr, nullptr) < 0)
     {
       error::send_errno("Tracing failed");
@@ -23,8 +39,24 @@ std::unique_ptr<yad::process> yad::process::launch(std::filesystem::path path)
       error::send_errno("exec failed");
     }
   }
-  std::unique_ptr<process> proc (new process(pid, /*terminate on end*/true));
-  proc->wait_on_signal();
+  
+  channel.close_write();
+  auto data = channel.read();
+  channel.close_read();
+
+  if (data.size() > 0)
+  {
+    waitpid(pid, nullptr, 0);
+    auto chars = reinterpret_cast<char *>(data.data());
+    error::send(std::string(chars, chars + data.size()));
+  }
+
+
+  std::unique_ptr<process> proc (new process(pid, /*terminate on end*/true, debug));
+  if(debug)
+  {
+    proc->wait_on_signal();
+  }
 
   return proc;
 }
@@ -40,7 +72,7 @@ std::unique_ptr<yad::process> yad::process::attach(pid_t pid)
     error::send_errno("Could not attach");
   }
 
-  std::unique_ptr<process> proc(new process(pid, /*terminate_on_end*/false));
+  std::unique_ptr<process> proc(new process(pid, /*terminate_on_end*/false, /*attached*/true));
   proc->wait_on_signal;
 
   return proc;
@@ -54,14 +86,17 @@ yad::process::~process()
   if(pid_ != 0)
   {
     int status;
-    if (state_ == process_state::running)
+    if (is_attached_)
     {
-      kill(pid_, SIGSTOP);
-      waitpid(pid_, &status, 0);
+      if (state_ == process_state::running)
+      {
+        kill(pid_, SIGSTOP);
+        waitpid(pid_, &status, 0);
+      }
+      //we then detach from the process and let it continue
+      ptrace(PTRACE_DETACH, pid_, nullptr, nullptr);
+      kill(pid_, SIGCONT);
     }
-    //we then detach from the process and let it continue
-    ptrace(PTRACE_DETACH, pid_, nullptr, nullptr);
-    kill(pid_, SIGCONT);
 
     if(terminate_on_end_)
     {
